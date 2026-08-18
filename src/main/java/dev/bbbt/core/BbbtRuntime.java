@@ -14,6 +14,7 @@ import dev.bbbt.suggest.SuggestionEngine;
 import dev.bbbt.text.CaptionService;
 import dev.bbbt.track.PlacementTracker;
 import dev.bbbt.net.TelemetryClient;
+import dev.bbbt.net.ModelSync;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
@@ -29,6 +30,7 @@ public final class BbbtRuntime {
 
 	private static final int TRAINING_CHUNK = 96;
 	private static final long AUTOSAVE_INTERVAL_MS = 60_000L;
+	private static final long MODEL_SYNC_INTERVAL_MS = 6L * 60L * 60L * 1000L;
 
 	private static final long CAPTION_SWEEP_INTERVAL_MS = 300_000L;
 
@@ -46,7 +48,9 @@ public final class BbbtRuntime {
 	private final ExecutorService worker;
 	private final CaptionService captions;
 	private final TelemetryClient telemetry;
+	private final ModelSync modelSync;
 	private final AtomicBoolean predictionInFlight = new AtomicBoolean();
+	private final AtomicBoolean modelSyncInFlight = new AtomicBoolean();
 
 	private BlockPalette palette;
 	private dev.bbbt.nn.SuggestionNetwork network;
@@ -55,10 +59,12 @@ public final class BbbtRuntime {
 	private LoraAdapter adapter;
 	private LoraTrainer trainer;
 	private String modelOrigin = "none";
+	private String modelVersion = "";
 
 	private String worldId;
 	private long lastSaveAt;
 	private long lastCaptionSweepAt;
+	private long lastModelSyncAt;
 
 	private BbbtRuntime() {
 		this.rootDir = FabricLoader.getInstance().getConfigDir().resolve(BrickByBrickTab.MOD_ID);
@@ -82,8 +88,11 @@ public final class BbbtRuntime {
 				worker, versionOf("minecraft"), versionOf(BrickByBrickTab.MOD_ID));
 		this.telemetry = new TelemetryClient(config, datasetDir.resolve("telemetry-state.json"),
 				versionOf("minecraft"), versionOf(BrickByBrickTab.MOD_ID));
+		this.modelSync = new ModelSync(config, modelDir);
 
 		reloadModel();
+		lastModelSyncAt = System.currentTimeMillis();
+		requestModelSync(false);
 	}
 
 	private static String versionOf(String modId) {
@@ -135,6 +144,10 @@ public final class BbbtRuntime {
 		return modelOrigin;
 	}
 
+	public String modelVersion() {
+		return modelVersion;
+	}
+
 	public boolean hasModel() {
 		return engine != null && engine.hasModel();
 	}
@@ -152,6 +165,7 @@ public final class BbbtRuntime {
 		this.palette = loaded.palette();
 		this.network = loaded.network();
 		this.modelOrigin = loaded.origin();
+		this.modelVersion = loaded.version() == null ? "" : loaded.version();
 		this.contextBuilder = new ContextBuilder(palette);
 
 		SuggestionEngine newEngine = new SuggestionEngine(palette);
@@ -260,6 +274,11 @@ public final class BbbtRuntime {
 		if (System.currentTimeMillis() - lastCaptionSweepAt > CAPTION_SWEEP_INTERVAL_MS) {
 			sweepCaptions();
 		}
+
+		if (config.autoUpdateModel
+				&& System.currentTimeMillis() - lastModelSyncAt > MODEL_SYNC_INTERVAL_MS) {
+			requestModelSync(false);
+		}
 	}
 
 	public void submitTraining(int maxSamples) {
@@ -319,6 +338,24 @@ public final class BbbtRuntime {
 
 	public void workerDeletePlacements() {
 		worker.execute(telemetry::requestPlacementDeletion);
+	}
+
+	public void requestModelSync(boolean force) {
+		if (!modelSyncInFlight.compareAndSet(false, true)) {
+			return;
+		}
+		worker.execute(() -> {
+			try {
+				if (modelSync.sync(force)) {
+					reloadModel();
+				}
+			} catch (RuntimeException e) {
+				BrickByBrickTab.LOG.warn("Model update failed", e);
+			} finally {
+				lastModelSyncAt = System.currentTimeMillis();
+				modelSyncInFlight.set(false);
+			}
+		});
 	}
 
 	public void shutdown() {

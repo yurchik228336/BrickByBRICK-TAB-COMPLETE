@@ -72,7 +72,7 @@ public final class BbbtConfig {
 	public AdapterScope loraScope = AdapterScope.GLOBAL;
 
 	public ConsentState placementConsent = ConsentState.UNASKED;
-	public String telemetryEndpoint = "";
+	public String telemetryEndpoint = "https://bbb.ruscreat.dev";
 
 	public String installId = "";
 
@@ -85,7 +85,7 @@ public final class BbbtConfig {
 	public boolean captionHarvestSigns = false;
 
 	public boolean captionReviewBeforeUpload = true;
-	public String captionEndpoint = "";
+	public String captionEndpoint = "https://bbb.ruscreat.dev";
 
 	public String captionLanguage = "";
 
@@ -95,6 +95,8 @@ public final class BbbtConfig {
 	public int captionMaxPlacements = 4096;
 
 	public String modelOverridePath = "";
+	public String modelEndpoint = "";
+	public boolean autoUpdateModel = true;
 	public boolean autoPlaceEnabled = false;
 	public boolean debugOverlay = false;
 
@@ -150,6 +152,9 @@ public final class BbbtConfig {
 		}
 		if (modelOverridePath == null) {
 			modelOverridePath = "";
+		}
+		if (modelEndpoint == null) {
+			modelEndpoint = "";
 		}
 	}
 

@@ -117,8 +117,13 @@ public final class SuggestionHud implements HudElement {
 		Minecraft client = Minecraft.getInstance();
 		if (config.debugOverlay) {
 			String origin = runtime.hasModel() ? runtime.modelOrigin() : "none";
+			Component originLabel = Component.translatable("bbbt.option.modelStatus." + origin);
+			String version = runtime.modelVersion();
+			Component status = version != null && !version.isBlank()
+					? Component.translatable("bbbt.option.modelStatus.versioned", version, originLabel)
+					: originLabel;
 			lines.add(Component.translatable("bbbt.hud.debug",
-					Component.translatable("bbbt.option.modelStatus." + origin),
+					status,
 					String.format(Locale.ROOT, "%.1f",
 							controller.lastComputeNanos() / 1_000_000.0)));
 			if (controller.focusBox() != null) {

@@ -21,7 +21,8 @@ import net.minecraft.network.chat.Component;
 
 public final class SettingsScreen extends OptionsSubScreen {
 
-	private static final Set<String> MODEL_ORIGIN_KEYS = Set.of("bundled", "config", "override");
+	private static final Set<String> MODEL_ORIGIN_KEYS = Set.of(
+			"bundled", "config", "override", "server", "none");
 
 	private final BbbtRuntime runtime;
 	private final BbbtConfig config;
@@ -99,8 +100,15 @@ public final class SettingsScreen extends OptionsSubScreen {
 		list.addHeader(Component.translatable("bbbt.screen.group.advanced"));
 		list.addBig(toggle("autoPlaceEnabled", () -> config.autoPlaceEnabled,
 				value -> config.autoPlaceEnabled = value));
+		list.addBig(toggle("autoUpdateModel", () -> config.autoUpdateModel, value -> {
+			config.autoUpdateModel = value;
+			if (value) {
+				runtime.requestModelSync(false);
+			}
+		}));
 		list.addBig(actionButton("bbbt.option.reloadModel", () -> {
 			runtime.reloadModel();
+			runtime.requestModelSync(true);
 			BrickByBrickTabClient.controller().invalidate();
 			feedback("bbbt.option.reloadModel.done");
 		}));
@@ -112,7 +120,12 @@ public final class SettingsScreen extends OptionsSubScreen {
 		if (!MODEL_ORIGIN_KEYS.contains(origin)) {
 			origin = runtime.hasModel() ? "config" : "none";
 		}
-		return Component.translatable("bbbt.option.modelStatus." + origin);
+		Component originLabel = Component.translatable("bbbt.option.modelStatus." + origin);
+		String version = runtime.modelVersion();
+		if (version != null && !version.isBlank()) {
+			return Component.translatable("bbbt.option.modelStatus.versioned", version, originLabel);
+		}
+		return originLabel;
 	}
 
 	@Override

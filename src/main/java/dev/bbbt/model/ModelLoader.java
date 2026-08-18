@@ -4,6 +4,7 @@ import dev.bbbt.BrickByBrickTab;
 import dev.bbbt.nn.SuggestionNetwork;
 import dev.bbbt.nn.WeightStore;
 import dev.bbbt.palette.BlockPalette;
+import dev.bbbt.net.ModelSync;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -17,7 +18,7 @@ public final class ModelLoader {
 
 	private static final String RESOURCE_ROOT = "/assets/" + BrickByBrickTab.MOD_ID + "/model/";
 
-	public record Loaded(BlockPalette palette, SuggestionNetwork network, String origin) {
+	public record Loaded(BlockPalette palette, SuggestionNetwork network, String origin, String version) {
 		public boolean hasNetwork() {
 			return network != null;
 		}
@@ -30,6 +31,7 @@ public final class ModelLoader {
 		Path weights = null;
 		Path palette = null;
 		String diskOrigin = null;
+		String version = "";
 
 		if (overridePath != null && !overridePath.isBlank()) {
 			Path candidate = Path.of(overridePath);
@@ -38,6 +40,10 @@ public final class ModelLoader {
 				diskOrigin = "override";
 				Path sibling = candidate.resolveSibling(PALETTE_FILE);
 				palette = Files.isRegularFile(sibling) ? sibling : null;
+				Path parent = candidate.getParent();
+				if (parent != null) {
+					version = ModelSync.readVersionFile(parent);
+				}
 			} else {
 				BrickByBrickTab.LOG.warn("Model override path does not exist: {}", overridePath);
 			}
@@ -47,7 +53,8 @@ public final class ModelLoader {
 			Path candidate = modelDir.resolve(WEIGHTS_FILE);
 			if (Files.isRegularFile(candidate)) {
 				weights = candidate;
-				diskOrigin = "config";
+				version = ModelSync.readVersionFile(modelDir);
+				diskOrigin = version.isBlank() ? "config" : "server";
 			}
 		}
 		if (palette == null) {
@@ -61,15 +68,16 @@ public final class ModelLoader {
 		if (loadedPalette == null) {
 			BrickByBrickTab.LOG.warn(
 					"No block palette found; suggestions will use pattern rules only");
-			return new Loaded(BlockPalette.empty(), null, "none");
+			return new Loaded(BlockPalette.empty(), null, "none", "");
 		}
 
 		SuggestionNetwork fromDisk = readNetworkFromFile(weights);
 		if (fromDisk != null) {
-			return new Loaded(loadedPalette, fromDisk, diskOrigin != null ? diskOrigin : "config");
+			return new Loaded(loadedPalette, fromDisk, diskOrigin != null ? diskOrigin : "config",
+					version);
 		}
 		SuggestionNetwork bundled = readBundledNetwork();
-		return new Loaded(loadedPalette, bundled, bundled != null ? "bundled" : "none");
+		return new Loaded(loadedPalette, bundled, bundled != null ? "bundled" : "none", "");
 	}
 
 	private static BlockPalette readPalette(Path path) {
