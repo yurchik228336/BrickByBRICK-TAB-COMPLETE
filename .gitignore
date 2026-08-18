@@ -1,0 +1,52 @@
+# Gradle
+.gradle/
+build/
+out/
+classes/
+
+# Loom
+.fabric/
+remappedSrc/
+run/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Python (ML side)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+ml/runs/
+ml/checkpoints/
+ml/data/cache/
+ml/out/
+*.ipynb_checkpoints/
+
+# Trained artifacts are large; ship them as releases, not in git.
+*.bbbt
+*.onnx
+*.pt
+*.ckpt
+
+# Local leftovers
+CONTINUE.txt
+dist/
+.env
+*.log
+*.zip
+tools/
+backend/
+ml/
