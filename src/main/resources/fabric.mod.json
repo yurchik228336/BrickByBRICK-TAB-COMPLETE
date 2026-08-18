@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "brickbybricktab",
+  "version": "${version}",
+  "name": "Brick by Brick Tab",
+  "description": "Tab-completion for building. Predicts the next block you are about to place, learned only from blocks that players actually placed.",
+  "authors": [
+    "BRICK"
+  ],
+  "contact": {
+    "homepage": "https://t.me/brickstu",
+    "sources": "https://github.com/yurchik228336/BrickByBRICK-TAB-COMPLETE",
+    "issues": "https://github.com/yurchik228336/BrickByBRICK-TAB-COMPLETE/issues"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      "dev.bbbt.BrickByBrickTab"
+    ],
+    "client": [
+      "dev.bbbt.client.BrickByBrickTabClient"
+    ]
+  },
+  "mixins": [
+    {
+      "config": "brickbybricktab.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
